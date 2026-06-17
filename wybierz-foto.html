@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Wybierz Zdjęcie Profilowe</title>
+    
+    <link rel="manifest" href="manifest.json">
+    <script>
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('sw.js')
+          .then(() => console.log('PWA Service Worker zarejestrowany!'));
+      }
+    </script>
+
+    <style>
+        body, html { margin: 0; padding: 0; height: 100%; background: #000; color: white; font-family: sans-serif; overflow: hidden; }
+
+        /* GÓRNY PASEK NAV */
+        .top-nav { position: fixed; top: 0; width: 100%; height: 50px; background: rgba(0,0,0,0.9); display: flex; align-items: center; justify-content: center; z-index: 100; padding: 0 20px; border-bottom: 0.5px solid #222; }
+        .back-icon { position: absolute; left: 20px; font-size: 24px; cursor: pointer; }
+        .save-btn { position: absolute; right: 20px; color: #ff6200; font-weight: bold; cursor: pointer; }
+        .title { font-weight: bold; font-size: 16px; }
+
+        /* KADROWANIE - WARSTWA GŁÓWNA */
+        .crop-container { position: absolute; top: 50px; left: 0; width: 100%; height: calc(100% - 130px); background-size: cover; background-position: center; display: flex; align-items: center; justify-content: center; cursor: move; }
+        .crop-mask { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 10; pointer-events: none; }
+        .crop-circle { position: relative; width: 250px; height: 250px; border-radius: 50%; border: 4px solid #fff; z-index: 20; box-shadow: 0 0 10px rgba(0,0,0,0.5); pointer-events: none; overflow: hidden; }
+
+        /* PODGLĄD (AVATAR) */
+        .preview-section { position: absolute; bottom: 80px; left: 0; width: 100%; display: flex; flex-direction: column; align-items: center; gap: 10px; z-index: 50; }
+        .preview-avatar { width: 100px; height: 100px; border-radius: 50%; border: 3px solid #222; background-size: cover; background-position: center; position: relative; }
+        .plus-icon { position: absolute; bottom: 0; right: 0; width: 30px; height: 30px; background: #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 2px solid #000; color: #000; font-size: 22px; font-weight: bold; cursor: pointer; }
+        .preview-label { font-size: 14px; color: #aaa; }
+
+        /* PRZYCISKI AKCJI */
+        .action-bar { position: absolute; bottom: 0; left: 0; width: 100%; height: 80px; background: rgba(0,0,0,0.9); display: flex; justify-content: space-around; align-items: center; z-index: 60; padding: 0 20px; }
+        .action-btn { background: rgba(255,255,255,0.1); border: none; color: white; padding: 12px 20px; border-radius: 8px; font-weight: bold; cursor: pointer; transition: background 0.2s; }
+        .action-btn:active { background: rgba(255,255,255,0.2); }
+        .action-btn.active { background: rgba(255,98,0,0.3); border: 1px solid #ff6200; }
+    </style>
+</head>
+<body>
+
+<div class="top-nav">
+    <div class="back-icon" onclick="history.back()">‹</div>
+    <div class="title">Wybierz Zdjęcie Profilowe</div>
+    <div class="save-btn" onclick="saveAvatar()">Zapisz</div>
+</div>
+
+<div class="crop-container" id="cropContainer">
+    <div class="crop-mask"></div>
+    <div class="crop-circle" id="cropCircle"></div>
+</div>
+
+<div class="preview-section">
+    <div class="preview-avatar" id="previewAvatar" onclick="document.getElementById('fileInput').click()">
+        <div class="plus-icon">+</div>
+    </div>
+    <div class="preview-label">Podgląd</div>
+    <input type="file" id="fileInput" hidden accept="image/*" onchange="previewImage(event)">
+</div>
+
+<div class="action-bar">
+    <button class="action-btn active" onclick="setMode('crop')">Dociąć</button>
+    <button class="action-btn" onclick="setMode('rotate')">Obrócić</button>
+    <button class="action-btn" onclick="document.getElementById('fileInput').click()">Inne Zdjęcie</button>
+</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getStorage, ref, uploadString, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
+
+    const firebaseConfig = { /* ... Twój config ... */ };
+    const app = initializeApp(firebaseConfig);
+    const storage = getStorage(app);
+
+    const cropContainer = document.getElementById('cropContainer');
+    const previewAvatar = document.getElementById('previewAvatar');
+
+    window.previewImage = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            const dataUrl = event.target.result;
+            cropContainer.style.backgroundImage = `url(${dataUrl})`;
+            cropImage(dataUrl);
+        };
+        reader.readAsDataURL(file);
+    };
+
+    async function cropImage(dataUrl) {
+        const img = new Image();
+        img.src = dataUrl;
+        await new Promise(r => img.onload = r);
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        const size = 150; 
+        canvas.width = size;
+        canvas.height = size;
+        ctx.beginPath();
+        ctx.arc(size / 2, size / 2, size / 2, 0, Math.PI * 2, true);
+        ctx.closePath();
+        ctx.clip();
+        ctx.drawImage(img, (img.width - img.height) / 2, 0, img.height, img.height, 0, 0, size, size);
+        const croppedDataUrl = canvas.toDataURL('image/png');
+        previewAvatar.style.backgroundImage = `url(${croppedDataUrl})`;
+        localStorage.setItem('tiktok_user_avatar_cropped', croppedDataUrl);
+    }
+
+    window.saveAvatar = async () => {
+        const croppedDataUrl = localStorage.getItem('tiktok_user_avatar_cropped');
+        if (!croppedDataUrl) return alert("Najpierw docinij zdjęcie!");
+        const user = localStorage.getItem('tiktok_user') || 'user_id_default';
+        const storageRef = ref(storage, `avatars/${user}.png`);
+        try {
+            await uploadString(storageRef, croppedDataUrl, 'data_url');
+            const downloadUrl = await getDownloadURL(storageRef);
+            localStorage.setItem('tiktok_user_avatar_url', downloadUrl);
+            alert("Avatar zapisany!");
+            window.location.href = 'profile.html';
+        } catch (error) {
+            console.error(error);
+            alert("Błąd podczas zapisywania!");
+        }
+    };
+</script>
+
+</body>
+</html>

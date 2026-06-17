@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Twój Profil</title>
+
+    <link rel="manifest" href="manifest.json">
+    <script>
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('sw.js')
+          .then(() => console.log('PWA Service Worker zarejestrowany!'));
+      }
+    </script>
+
+    <style>
+        body { margin: 0; background: #000; color: #fff; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; padding-bottom: 60px; }
+        
+        .top-nav { display: flex; justify-content: space-between; padding: 15px; font-size: 22px; align-items: center; }
+        .top-nav span { visibility: hidden; } 
+        .top-nav .menu-icon { visibility: visible; } 
+        
+        .profile-container { display: flex; flex-direction: column; align-items: center; padding: 20px; }
+        .avatar { width: 100px; height: 100px; border-radius: 50%; border: 2px solid #222; background-size: cover; background-position: center; margin-bottom: 15px; }
+        .username { font-size: 18px; font-weight: bold; margin: 5px 0; }
+        .handle { color: #888; font-size: 14px; margin-bottom: 20px; }
+        
+        .stats { display: flex; gap: 30px; margin-bottom: 20px; }
+        .stat-item { text-align: center; }
+        .stat-val { font-weight: bold; font-size: 16px; }
+        .stat-label { color: #888; font-size: 11px; }
+
+        .btn-box { display: flex; gap: 10px; margin-bottom: 20px; }
+        .btn { background: #333; padding: 10px 40px; border-radius: 5px; font-weight: bold; font-size: 14px; cursor: pointer; }
+
+        .tabs { display: flex; justify-content: space-around; border-bottom: 1px solid #222; padding: 10px 0; }
+        .tab { color: #555; font-size: 20px; cursor: pointer; }
+        .tab.active { color: #fff; border-bottom: 2px solid #fff; }
+
+        .video-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px; }
+        .video-item { aspect-ratio: 9/16; background: #111; }
+
+        /* PASEK NAWIGACJI */
+        .bottom-nav { position: fixed; bottom: 0; width: 100%; height: 60px; background: #000; display: flex; justify-content: space-around; align-items: center; z-index: 100; border-top: 1px solid #333; }
+        .nav-item { color: #888; font-size: 10px; display: flex; flex-direction: column; align-items: center; cursor: pointer; }
+        .nav-item.active-nav { color: white; }
+        .nav-icon { width: 24px; height: 24px; margin-bottom: 4px; fill: currentColor; }
+        .plus-btn { background: white; color: black; padding: 6px 18px; border-radius: 8px; font-weight: bold; font-size: 22px; cursor: pointer; }
+        .notif-badge { position: absolute; background: #fe2c55; color: white; font-size: 10px; border-radius: 50%; width: 16px; height: 16px; display: flex; align-items: center; justify-content: center; top: 10px; right: 28%; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<div class="top-nav">
+    <span></span> <span></span>
+    <div class="menu-icon">≡</div>
+</div>
+
+<div class="profile-container">
+    <div class="avatar" id="profAvatar"></div>
+    <div class="username" id="profName">...</div>
+    <div class="handle" id="profHandle">...</div>
+    
+    <div class="stats">
+        <div class="stat-item"><div class="stat-val" id="stat-following">0</div><div class="stat-label">Obserwowani</div></div>
+        <div class="stat-item"><div class="stat-val" id="stat-followers">0</div><div class="stat-label">Obserwujący</div></div>
+        <div class="stat-item"><div class="stat-val" id="stat-likes">0</div><div class="stat-label">Polubienia</div></div>
+    </div>
+    
+    <div class="btn-box">
+        <div class="btn" onclick="editProfile()">Edytuj profil</div>
+    </div>
+</div>
+
+<div class="tabs">
+    <div class="tab active">|||</div>
+    <div class="tab">♥</div>
+    <div class="tab">🔒</div>
+</div>
+
+<div class="video-grid" id="grid"></div>
+
+<div class="bottom-nav">
+    <div class="nav-item" onclick="window.location.href='index.html'">
+        <svg class="nav-icon" viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+        Główna
+    </div>
+    <div class="nav-item" onclick="window.location.href='znajomi.html'">
+        <svg class="nav-icon" viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
+        Znajomi
+    </div>
+    <div class="plus-btn" onclick="window.location.href='recorder.html'">+</div>
+    <div class="nav-item" style="position: relative;">
+        <span class="notif-badge">9</span>
+        <svg class="nav-icon" viewBox="0 0 24 24"><path d="M21.99 8c0-.72-.37-1.35-.94-1.7L12 1 2.95 6.3C2.38 6.65 2 7.28 2 8v10c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8zM12 3.72L19.05 8 12 12.28 4.95 8 12 3.72zM20 18H4v-8l8 5 8-5v8z"/></svg>
+        Przychodzące
+    </div>
+    <div class="nav-item active-nav" onclick="window.location.href='profile.html'">
+        <svg class="nav-icon" viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+        Profil
+    </div>
+</div>
+
+<script type="module">
+    document.getElementById('profName').innerText = localStorage.getItem('tiktok_user_name') || "Użytkownik";
+    document.getElementById('profHandle').innerText = localStorage.getItem('tiktok_user_handle') || "@user";
+    
+    const avatar = localStorage.getItem('tiktok_user_avatar');
+    if (avatar) {
+        document.getElementById('profAvatar').style.backgroundImage = `url(${avatar})`;
+    }
+
+    window.editProfile = () => {
+        const newName = prompt("Zmień nazwę:", localStorage.getItem('tiktok_user_name'));
+        if (newName) {
+            localStorage.setItem('tiktok_user_name', newName);
+            location.reload();
+        }
+    }
+</script>
+
+</body>
+</html>

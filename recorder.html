@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Nagrywanie - TikTok Clone</title>
+    
+    <style>
+        body { margin: 0; background: #000; color: white; display: flex; flex-direction: column; align-items: center; height: 100vh; font-family: sans-serif; overflow: hidden; }
+        #videoPreview { position: absolute; top: 0; width: 100%; height: 100%; object-fit: cover; }
+        
+        .controls { position: absolute; bottom: 50px; z-index: 10; display: flex; gap: 20px; align-items: center; }
+        .btn { padding: 12px 25px; border-radius: 25px; border: none; background: rgba(255,255,255,0.2); color: white; cursor: pointer; font-weight: bold; }
+        
+        #recordBtn { 
+            width: 70px; height: 70px; border-radius: 50%; border: 4px solid rgba(255,255,255,0.3); background: #fe2c55; cursor: pointer;
+            transition: transform 0.2s, background-color 0.2s;
+        }
+        #recordBtn:active { transform: scale(0.9); }
+        
+        #editModal { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background: #000; flex-direction: column; align-items: center; justify-content: center; z-index: 9999; }
+        #videoContainer { width: 90%; max-height: 60%; margin-bottom: 20px; }
+        #descInput { padding: 15px; width: 80%; border-radius: 10px; border: none; background: #222; color: white; margin-bottom: 20px; }
+        #progressContainer { display:none; position:fixed; top:0; width:100%; background:#333; height:5px; z-index: 10000; }
+        #progressBar { width:0%; height:100%; background:#ff6200; }
+    </style>
+</head>
+<body>
+
+    <div id="progressContainer"><div id="progressBar"></div></div>
+    <video id="videoPreview" autoplay playsinline muted></video>
+    
+    <div class="controls">
+        <button class="btn" onclick="document.getElementById('galleryInput').click()">Galeria</button>
+        <div id="recordBtn"></div>
+        <input type="file" id="galleryInput" accept="video/*" style="display:none" onchange="handleFile(this)">
+    </div>
+
+    <div id="editModal">
+        <div id="videoContainer"></div>
+        <input type="text" id="descInput" placeholder="Napisz opis...">
+        <button class="btn" style="background:#ff6200" onclick="finalizeUpload()">Opublikuj</button>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getStorage, ref, uploadBytesResumable, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
+
+        const firebaseConfig = { /* Wklej tutaj swój config */ };
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const storage = getStorage(app);
+
+        let stream, mediaRecorder, recordedChunks = [];
+        const btn = document.getElementById('recordBtn');
+
+        async function startCamera() {
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: true });
+                document.getElementById('videoPreview').srcObject = stream;
+            } catch (e) { alert("Błąd dostępu do kamery: " + e.message); }
+        }
+        startCamera();
+
+        btn.addEventListener('pointerdown', () => {
+            recordedChunks = [];
+            mediaRecorder = new MediaRecorder(stream);
+            mediaRecorder.ondataavailable = e => { if(e.data.size > 0) recordedChunks.push(e.data); };
+            mediaRecorder.onstop = () => openEditModal(new Blob(recordedChunks, { type: "video/mp4" }));
+            mediaRecorder.start();
+            btn.style.backgroundColor = "#fff";
+        });
+
+        btn.addEventListener('pointerup', () => {
+            if (mediaRecorder && mediaRecorder.state === "recording") {
+                mediaRecorder.stop();
+                btn.style.backgroundColor = "#fe2c55";
+            }
+        });
+
+        window.handleFile = (input) => { if (input.files[0]) openEditModal(input.files[0]); };
+
+        window.openEditModal = (blob) => {
+            window.tempBlob = blob;
+            const container = document.getElementById('videoContainer');
+            container.innerHTML = `<video src="${URL.createObjectURL(blob)}" controls autoplay style="width:100%; border-radius:10px;"></video>`;
+            document.getElementById('editModal').style.display = 'flex';
+        };
+
+        window.finalizeUpload = async () => {
+            document.getElementById('editModal').style.display = 'none';
+            document.getElementById('progressContainer').style.display = 'block';
+            
+            const storageRef = ref(storage, 'videos/' + Date.now() + '.mp4');
+            const uploadTask = uploadBytesResumable(storageRef, window.tempBlob);
+            
+            uploadTask.on('state_changed', 
+                (s) => document.getElementById('progressBar').style.width = (s.bytesTransferred / s.totalBytes) * 100 + '%',
+                (e) => alert("Błąd: " + e.message),
+                async () => {
+                    await addDoc(collection(db, "videos"), {
+                        url: await getDownloadURL(uploadTask.snapshot.ref),
+                        desc: document.getElementById('descInput').value,
+                        author: localStorage.getItem('tiktok_user_name') || "Anonim",
+                        createdAt: serverTimestamp()
+                    });
+                    window.location.href = "index.html";
+                }
+            );
+        };
+    </script>
+</body>
+</html>
