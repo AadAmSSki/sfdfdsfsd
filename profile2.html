@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Profil Użytkownika</title>
+    <style>
+        body { margin: 0; background: #000; color: #fff; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; padding-bottom: 60px; }
+        .back-btn { position: absolute; top: 15px; left: 15px; font-size: 24px; color: white; cursor: pointer; text-decoration: none; z-index: 100; }
+        .profile-container { display: flex; flex-direction: column; align-items: center; padding: 20px; }
+        .avatar { width: 100px; height: 100px; border-radius: 50%; border: 2px solid #222; background-size: cover; background-position: center; margin-bottom: 15px; background-color: #333; }
+        .username { font-size: 18px; font-weight: bold; margin: 5px 0; }
+        .handle { color: #888; font-size: 14px; margin-bottom: 20px; }
+        .stats { display: flex; gap: 30px; margin-bottom: 20px; }
+        .stat-item { text-align: center; }
+        .stat-val { font-weight: bold; font-size: 16px; }
+        .stat-label { color: #888; font-size: 11px; }
+        .btn { background: #fe2c55; color: white; padding: 10px 40px; border-radius: 5px; font-weight: bold; font-size: 14px; cursor: pointer; border: none; transition: background 0.2s, opacity 0.2s; }
+        
+        .video-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px; }
+        .video-item { aspect-ratio: 9/16; background: #111; cursor: pointer; overflow: hidden; }
+        .video-item video { width: 100%; height: 100%; object-fit: cover; pointer-events: none; }
+
+        #videoModal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 1000; }
+        #modalVideo { width: 100%; height: 100%; object-fit: contain; }
+        .close-btn { position: absolute; top: 20px; left: 20px; color: white; font-size: 30px; cursor: pointer; z-index: 1001; background: rgba(0,0,0,0.5); padding: 5px 15px; border-radius: 50%; }
+        #likeBtn { position: absolute; bottom: 30px; right: 20px; font-size: 40px; color: white; cursor: pointer; z-index: 1002; transition: color 0.2s; }
+    </style>
+</head>
+<body>
+
+<a href="index.html" class="back-btn">←</a>
+
+<div class="profile-container">
+    <div class="avatar" id="profAvatar"></div>
+    <div class="username" id="profName">Wczytywanie...</div>
+    <div class="handle" id="profHandle"></div>
+    <div class="stats">
+        <div class="stat-item"><div class="stat-val" id="followingCount">0</div><div class="stat-label">Obserwowani</div></div>
+        <div class="stat-item"><div class="stat-val" id="followersCount">0</div><div class="stat-label">Obserwujący</div></div>
+        <div class="stat-item"><div class="stat-val" id="likesCount">0</div><div class="stat-label">Polubienia</div></div>
+    </div>
+    <button class="btn" id="followBtn">Obserwuj</button>
+</div>
+
+<div class="video-grid" id="grid"></div>
+
+<div id="videoModal">
+    <div class="close-btn" onclick="closeVideo()">✕</div>
+    <div id="likeBtn">♥</div>
+    <video id="modalVideo" playsinline controls></video>
+</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getFirestore, collection, query, where, getDocs, updateDoc, setDoc, arrayUnion, arrayRemove, increment } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyDro4WgKOggj12aWFiQprLc4XEc6O3MuBg",
+        authDomain: "nwmok-8680a.firebaseapp.com",
+        projectId: "nwmok-8680a",
+        storageBucket: "nwmok-8680a.firebasestorage.app",
+        messagingSenderId: "1072719450908",
+        appId: "1:1072719450908:web:aa47aad13acf2a3115e0d9"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const targetUserName = new URLSearchParams(window.location.search).get('user');
+    const myName = localStorage.getItem('tiktok_user_name');
+    
+    let isProcessing = false;
+    let currentUserDoc = null; 
+
+    window.openVideo = (url) => {
+        const modal = document.getElementById('videoModal');
+        const vid = document.getElementById('modalVideo');
+        document.getElementById('likeBtn').style.color = "white";
+        vid.src = url;
+        modal.style.display = 'block';
+        vid.play();
+    };
+
+    window.closeVideo = () => {
+        const modal = document.getElementById('videoModal');
+        const vid = document.getElementById('modalVideo');
+        vid.pause();
+        vid.src = "";
+        modal.style.display = 'none';
+    };
+
+    async function loadData() {
+        if (!targetUserName) return;
+
+        const userQuery = query(collection(db, "users"), where("name", "==", targetUserName));
+        const userSnapshot = await getDocs(userQuery);
+
+        if (!userSnapshot.empty) {
+            currentUserDoc = userSnapshot.docs[0];
+            let data = currentUserDoc.data();
+            
+            document.getElementById('profName').innerText = data.name || targetUserName;
+            document.getElementById('profHandle').innerText = "@" + (data.handle || targetUserName);
+            document.getElementById('followersCount').innerText = data.followersCount || 0;
+            document.getElementById('followingCount').innerText = data.followingCount || 0;
+            document.getElementById('likesCount').innerText = data.likesTotalCount || 0;
+            if (data.avatar) document.getElementById('profAvatar').style.backgroundImage = `url(${data.avatar})`;
+
+            const btn = document.getElementById('followBtn');
+            let isFollowing = data.followers && data.followers.includes(myName);
+
+            const updateUI = (following) => {
+                btn.innerText = following ? "Obserwujesz" : "Obserwuj";
+                btn.style.backgroundColor = following ? "#333" : "#fe2c55";
+            };
+            updateUI(isFollowing);
+
+            btn.onclick = async () => {
+                if (isProcessing) return;
+                isProcessing = true;
+                try {
+                    const myQuery = query(collection(db, "users"), where("name", "==", myName));
+                    const mySnapshot = await getDocs(myQuery);
+                    if (mySnapshot.empty) return;
+                    const myDocRef = mySnapshot.docs[0].ref;
+
+                    if (!isFollowing) {
+                        await updateDoc(currentUserDoc.ref, { followers: arrayUnion(myName), followersCount: increment(1) });
+                        await updateDoc(myDocRef, { followingCount: increment(1) });
+                        isFollowing = true;
+                    } else {
+                        await updateDoc(currentUserDoc.ref, { followers: arrayRemove(myName), followersCount: increment(-1) });
+                        await updateDoc(myDocRef, { followingCount: increment(-1) });
+                        isFollowing = false;
+                    }
+                    updateUI(isFollowing);
+                    document.getElementById('followersCount').innerText = parseInt(document.getElementById('followersCount').innerText) + (isFollowing ? 1 : -1);
+                } catch (e) { console.error(e); } finally { isProcessing = false; }
+            };
+
+            // Używamy setDoc z merge: true - to stworzy pole jeśli go nie ma
+            document.getElementById('likeBtn').onclick = async () => {
+                if (isProcessing) return;
+                isProcessing = true;
+                try {
+                    document.getElementById('likeBtn').style.color = "#fe2c55";
+                    const currentLikes = parseInt(document.getElementById('likesCount').innerText) || 0;
+                    
+                    await setDoc(currentUserDoc.ref, { likesTotalCount: currentLikes + 1 }, { merge: true });
+                    
+                    document.getElementById('likesCount').innerText = currentLikes + 1;
+                } catch (e) { console.error(e); } finally { isProcessing = false; }
+            };
+        }
+
+        const videoQuery = query(collection(db, "videos"), where("author", "==", targetUserName));
+        const videoSnapshot = await getDocs(videoQuery);
+        const grid = document.getElementById('grid');
+        videoSnapshot.forEach((docSnap) => {
+            const video = docSnap.data();
+            const div = document.createElement('div');
+            div.className = 'video-item';
+            div.innerHTML = `<video src="${video.url}"></video>`;
+            div.onclick = () => openVideo(video.url);
+            grid.appendChild(div);
+        });
+    }
+
+    loadData();
+</script>
+</body>
+</html>

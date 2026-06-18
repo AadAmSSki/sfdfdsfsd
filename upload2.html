@@ -29,6 +29,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getAuth } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyDro4WgKOggj12aWFiQprLc4XEc6O3MuBg",
@@ -41,21 +42,18 @@
 
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
+        const auth = getAuth(app); // Inicjalizacja Auth
 
-        // --- DANE CLOUDINARY (Uzupełnij) ---
         const CLOUD_NAME = "drqvrxtlz"; 
         const UPLOAD_PRESET = "nwmokok"; 
-        // -----------------------------------
 
-        // POBIERANIE MINIATURY Z INDEXEDDB
+        // [Pobieranie miniatury z IndexedDB pozostaje bez zmian...]
         const request = indexedDB.open("TikTokCloneDB", 1);
         request.onsuccess = (e) => {
             const db = e.target.result;
             if (!db.objectStoreNames.contains("videos")) return;
-            
             const tx = db.transaction("videos", "readonly");
             const getReq = tx.objectStore("videos").get("tempVideo");
-            
             getReq.onsuccess = () => {
                 if(getReq.result) {
                     const video = document.getElementById('videoThumbnail');
@@ -65,7 +63,6 @@
             };
         };
 
-        // PUBLIKACJA DO CLOUDINARY I FIRESTORE
         window.finalPublish = async () => {
             const btn = document.querySelector('.btn-publish');
             btn.innerText = "Publikowanie...";
@@ -82,7 +79,6 @@
                     if (!blob) { alert("Błąd: Brak wideo!"); return; }
 
                     try {
-                        // 1. Wysyłka do Cloudinary
                         const formData = new FormData();
                         formData.append("file", blob);
                         formData.append("upload_preset", UPLOAD_PRESET);
@@ -95,16 +91,16 @@
                         const data = await response.json();
                         if (!data.secure_url) throw new Error("Nie udało się przesłać wideo do chmury.");
 
-                        // 2. Zapis do Firestore
+                        // ZAPIS Z ID AUTORA
                         await addDoc(collection(db, "videos"), {
                             url: data.secure_url,
                             title: document.getElementById('titleInput').value,
                             desc: document.getElementById('descInput').value,
                             author: localStorage.getItem('tiktok_user_name') || "Anonim",
+                            authorId: auth.currentUser ? auth.currentUser.uid : "anon", // ID zalogowanego usera
                             createdAt: serverTimestamp()
                         });
 
-                        // 3. Czyszczenie bazy
                         const delTx = dbInstance.transaction("videos", "readwrite");
                         delTx.objectStore("videos").delete("tempVideo");
                         

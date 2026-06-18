@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Przychodzące</title>
+    <style>
+        body { margin: 0; background: #000; color: #fff; font-family: sans-serif; }
+        .header { padding: 15px; font-weight: bold; font-size: 18px; text-align: center; border-bottom: 1px solid #222; }
+        
+        /* Sekcje powiadomień */
+        .notif-item { display: flex; align-items: center; padding: 12px 15px; gap: 15px; }
+        .icon-circle { width: 45px; height: 45px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; }
+        .bg-blue { background: #007aff; }
+        .bg-pink { background: #fe2c55; }
+        .notif-text { flex: 1; font-size: 14px; }
+        .notif-count { background: #fe2c55; padding: 2px 6px; border-radius: 10px; font-size: 12px; }
+
+        /* Kontener na czaty (będzie uzupełniany przez JS) */
+        #chatList { margin-top: 10px; }
+        .chat-item { display: flex; align-items: center; padding: 12px 15px; gap: 15px; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+<div class="header">Przychodzące</div>
+
+<div class="notif-item">
+    <div class="icon-circle bg-blue">👥</div>
+    <div class="notif-text">Nowi obserwujący<br><span style="color:#888">...</span></div>
+</div>
+
+<div class="notif-item">
+    <div class="icon-circle bg-pink">❤️</div>
+    <div class="notif-text">Aktywność<br><span style="color:#888">...</span></div>
+</div>
+
+<hr style="border: 0; border-top: 1px solid #222;">
+
+<div id="chatList"></div>
+
+<script>
+    // Tutaj wkleisz kod, który pobierze czaty z Twojego Firebase
+    console.log("Gotowy do wczytania czatów z bazy danych.");
+</script>
+
+</body>
+</html>

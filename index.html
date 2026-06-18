@@ -30,10 +30,23 @@
         .notif-badge { position: absolute; background: #fe2c55; color: white; font-size: 10px; border-radius: 50%; width: 16px; height: 16px; display: flex; align-items: center; justify-content: center; top: 10px; right: 28%; font-weight: bold; }
 
         .sidebar { position: absolute; right: 10px; bottom: 80px; display: flex; flex-direction: column; gap: 20px; align-items: center; color: white; z-index: 5; }
+        .avatar-wrapper { position: relative; cursor: pointer; }
+        .avatar-circle { width: 45px; height: 45px; border-radius: 50%; border: 2px solid white; background-size: cover; background-position: center; background-color: #333; }
+        .follow-plus { position: absolute; bottom: -5px; left: 15px; background: #fe2c55; color: white; border-radius: 50%; width: 18px; height: 18px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 14px; }
+        
         .footer { position: absolute; bottom: 65px; left: 15px; color: white; z-index: 5; }
         .icon { width: 35px; fill: white; cursor: pointer; transition: transform 0.2s; }
         .action:active { transform: scale(0.9); }
         .like-count { font-size: 12px; margin-top: 5px; text-align: center; }
+
+        .menu-dots { position: absolute; bottom: 150px; right: 10px; color: white; font-size: 30px; cursor: pointer; z-index: 10; font-weight: bold; }
+        .menu-panel { display: none; position: absolute; bottom: 190px; right: 10px; background: #222; padding: 10px; border-radius: 8px; z-index: 20; }
+        .menu-panel.active { display: block; }
+        .del-btn { background: #ff3b30; color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; font-weight: bold; }
+        
+        #commentsPanel { position: fixed; bottom: -100%; left: 0; width: 100%; height: 60%; background: #111; color: white; border-top-left-radius: 15px; border-top-right-radius: 15px; z-index: 200; transition: 0.3s; padding: 20px; box-sizing: border-box; }
+        #commentsPanel.active { bottom: 0; }
+        .comment-input { width: 100%; padding: 12px; background: #222; border: none; color: white; margin-top: 10px; border-radius: 5px; box-sizing: border-box; }
     </style>
 </head>
 <body>
@@ -45,29 +58,28 @@
 <div id="feed"></div>
 
 <div class="bottom-nav">
-    <div class="nav-item active" onclick="window.location.href='index.html'">
-        <svg class="nav-icon" viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
-        Główna
-    </div>
-    <div class="nav-item" onclick="window.location.href='znajomi.html'">
-        <svg class="nav-icon" viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
-        Znajomi
-    </div>
+    <div class="nav-item active" onclick="window.location.href='index.html'"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>Główna</div>
+    <div class="nav-item" onclick="window.location.href='znajomi.html'"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>Znajomi</div>
     <div class="plus-btn" onclick="window.location.href='recorder.html'">+</div>
-    <div class="nav-item" style="position: relative;">
+    <div class="nav-item" onclick="window.location.href='messages.html'">
         <span class="notif-badge">9</span>
-        <svg class="nav-icon" viewBox="0 0 24 24"><path d="M21.99 8c0-.72-.37-1.35-.94-1.7L12 1 2.95 6.3C2.38 6.65 2 7.28 2 8v10c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8zM12 3.72L19.05 8 12 12.28 4.95 8 12 3.72zM20 18H4v-8l8 5 8-5v8z"/></svg>
-        Przychodzące
+        <svg class="nav-icon" viewBox="0 0 24 24"><path d="M21.99 8c0-.72-.37-1.35-.94-1.7L12 1 2.95 6.3C2.38 6.65 2 7.28 2 8v10c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8zM12 3.72L19.05 8 12 12.28 4.95 8 12 3.72zM20 18H4v-8l8 5 8-5v8z"/></svg>Przychodzące
     </div>
-    <div class="nav-item" onclick="window.location.href='profile.html'">
-        <svg class="nav-icon" viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
-        Profil
-    </div>
+    <div class="nav-item" onclick="window.location.href='profile.html'"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>Profil</div>
+</div>
+
+<div id="commentsPanel">
+    <div onclick="document.getElementById('commentsPanel').classList.remove('active')" style="text-align:right; font-size:24px; cursor:pointer; margin-bottom:10px;">✕</div>
+    <h3>Komentarze</h3>
+    <div id="commentsList" style="height:60%; overflow-y:scroll;"></div>
+    <input type="text" id="commentInput" class="comment-input" placeholder="Dodaj komentarz...">
+    <button onclick="postComment()" style="width:100%; padding:10px; margin-top:10px; background:#fe2c55; border:none; color:white; border-radius:5px; cursor:pointer;">Wyślij</button>
 </div>
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-    import { getFirestore, collection, query, orderBy, getDocs, doc, updateDoc, arrayUnion, arrayRemove } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+    import { getFirestore, collection, getDocs, doc, updateDoc, arrayUnion, arrayRemove, deleteDoc, addDoc, serverTimestamp, query, where, orderBy, onSnapshot, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+    import { getAuth } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
     const firebaseConfig = {
         apiKey: "AIzaSyDro4WgKOggj12aWFiQprLc4XEc6O3MuBg",
@@ -79,14 +91,47 @@
         measurementId: "G-T8JYCLS3BS"
     };
 
-    if (!localStorage.getItem('tiktok_user_name')) {
-        window.location.href = 'login.html';
-    }
-
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
+    const auth = getAuth(app);
     const feed = document.getElementById('feed');
     const currentUser = localStorage.getItem('tiktok_user_name') || "Anonim";
+    let activeVideoId = null;
+
+    if (!localStorage.getItem('tiktok_user_name')) window.location.href = 'login.html';
+
+    window.openComments = (videoId) => {
+        activeVideoId = videoId;
+        document.getElementById('commentsPanel').classList.add('active');
+        const q = query(collection(db, "comments"), where("videoId", "==", videoId), orderBy("createdAt", "desc"));
+        onSnapshot(q, (snapshot) => {
+            const list = document.getElementById('commentsList');
+            list.innerHTML = "";
+            snapshot.forEach(doc => { const c = doc.data(); list.innerHTML += `<div style="padding:5px 0;"><b>${c.author}:</b> ${c.text}</div>`; });
+        });
+    };
+
+    window.postComment = async () => {
+        const input = document.getElementById('commentInput');
+        if (!input.value.trim() || !activeVideoId) return;
+        
+        const videoDoc = await getDoc(doc(db, "videos", activeVideoId));
+        const videoData = videoDoc.data();
+
+        await addDoc(collection(db, "comments"), { videoId: activeVideoId, author: currentUser, text: input.value, createdAt: serverTimestamp() });
+        
+        if (videoData && videoData.authorId && videoData.authorId !== auth.currentUser?.uid) {
+            await addDoc(collection(db, "notifications"), {
+                recipient: videoData.authorId,
+                sender: currentUser,
+                text: `skomentował(a): ${input.value}`,
+                videoId: activeVideoId,
+                read: false,
+                createdAt: serverTimestamp()
+            });
+        }
+        input.value = "";
+    };
 
     window.toggleLike = async (videoId, btnElement, countElement) => {
         const videoRef = doc(db, "videos", videoId);
@@ -102,32 +147,54 @@
         }
     };
 
+    window.deleteVideo = async (videoId) => {
+        if (confirm("Na pewno usunąć ten film?")) {
+            await deleteDoc(doc(db, "videos", videoId));
+            location.reload();
+        }
+    };
+
     async function loadVideos() {
-        const q = query(collection(db, "videos"), orderBy("createdAt", "desc"));
-        const snapshot = await getDocs(q);
-        snapshot.forEach((doc) => {
-            const data = doc.data();
+        const snapshot = await getDocs(collection(db, "videos"));
+        let videos = [];
+        snapshot.forEach((doc) => videos.push({ id: doc.id, ...doc.data() }));
+
+        videos.forEach((data) => {
             const likes = data.likes || [];
             const isLiked = likes.includes(currentUser);
             const card = document.createElement('div');
             card.className = 'video-card';
+            const canDelete = auth.currentUser && data.authorId === auth.currentUser.uid;
+            
             card.innerHTML = `
                 <video src="${data.url}" loop playsinline onclick="this.paused ? this.play() : this.pause()"></video>
+                ${canDelete ? `<div class="menu-dots" onclick="this.nextElementSibling.classList.toggle('active')">...</div><div class="menu-panel"><button class="del-btn" onclick="deleteVideo('${data.id}')">Usuń film</button></div>` : ''}
                 <div class="sidebar">
-                    <div class="action" onclick="toggleLike('${doc.id}', this.querySelector('svg'), this.querySelector('.like-count'))">
+                    <div class="avatar-wrapper" onclick="window.location.href='profile2.html?user=${encodeURIComponent(data.author)}'">
+                        <div class="avatar-circle" style="background-image: url('${data.authorAvatar || 'default-avatar.png'}')"></div>
+                        <div class="follow-plus">+</div>
+                    </div>
+                    <div class="action" onclick="toggleLike('${data.id}', this.querySelector('svg'), this.querySelector('.like-count'))">
                         <svg class="icon" viewBox="0 0 24 24" style="fill: ${isLiked ? 'red' : 'white'}">
                             <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
                         </svg>
                         <div class="like-count">${likes.length}</div>
                     </div>
+                    <div class="action" onclick="openComments('${data.id}')">
+                        <svg class="icon" viewBox="0 0 24 24"><path d="M21.94 5.25c-.06-1.57-1.37-2.82-2.95-2.82H5.01c-1.58 0-2.89 1.25-2.95 2.82L2 19.34c0 1.55 1.25 2.8 2.8 2.8h14.4c1.55 0 2.8-1.25 2.8-2.8L21.94 5.25zM12 15.5c-3.04 0-5.5-2.46-5.5-5.5S8.96 4.5 12 4.5s5.5 2.46 5.5 5.5-2.46 5.5-5.5 5.5z"/></svg>
+                        <div class="like-count">Komentarze</div>
+                    </div>
                 </div>
-                <div class="footer">
-                    <h3>@${data.author || 'Anonim'}</h3>
-                    <p>${data.desc || ''}</p>
-                </div>
+                <div class="footer"><h3>@${data.author || 'Anonim'}</h3><p>${data.desc || ''}</p></div>
             `;
             feed.appendChild(card);
         });
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const videoIdToOpen = urlParams.get('videoId');
+        if (videoIdToOpen) {
+            setTimeout(() => window.openComments(videoIdToOpen), 1000);
+        }
 
         const observer = new IntersectionObserver((entries) => {
             entries.forEach(e => {
