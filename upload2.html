@@ -29,9 +29,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-        import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
 
-        // --- WKLEJ SWÓJ CONFIG PONIŻEJ ---
         const firebaseConfig = {
             apiKey: "AIzaSyDro4WgKOggj12aWFiQprLc4XEc6O3MuBg",
             authDomain: "nwmok-8680a.firebaseapp.com",
@@ -40,11 +38,14 @@
             messagingSenderId: "1072719450908",
             appId: "1:1072719450908:web:aa47aad13acf2a3115e0d9"
         };
-        // ---------------------------------
 
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
-        const storage = getStorage(app);
+
+        // --- DANE CLOUDINARY (Uzupełnij) ---
+        const CLOUD_NAME = "drqvrxtlz"; 
+        const UPLOAD_PRESET = "nwmokok"; 
+        // -----------------------------------
 
         // POBIERANIE MINIATURY Z INDEXEDDB
         const request = indexedDB.open("TikTokCloneDB", 1);
@@ -64,7 +65,7 @@
             };
         };
 
-        // PUBLIKACJA DO FIREBASE
+        // PUBLIKACJA DO CLOUDINARY I FIRESTORE
         window.finalPublish = async () => {
             const btn = document.querySelector('.btn-publish');
             btn.innerText = "Publikowanie...";
@@ -72,31 +73,41 @@
 
             const req = indexedDB.open("TikTokCloneDB", 1);
             req.onsuccess = (e) => {
-                const db = e.target.result;
-                const tx = db.transaction("videos", "readonly");
+                const dbInstance = e.target.result;
+                const tx = dbInstance.transaction("videos", "readonly");
                 const getReq = tx.objectStore("videos").get("tempVideo");
                 
                 getReq.onsuccess = async () => {
                     const blob = getReq.result;
                     if (!blob) { alert("Błąd: Brak wideo!"); return; }
+
                     try {
-                        const storageRef = ref(storage, 'videos/' + Date.now() + '.mp4');
-                        await uploadBytes(storageRef, blob);
-                        const url = await getDownloadURL(storageRef);
+                        // 1. Wysyłka do Cloudinary
+                        const formData = new FormData();
+                        formData.append("file", blob);
+                        formData.append("upload_preset", UPLOAD_PRESET);
+
+                        const response = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/video/upload`, {
+                            method: "POST",
+                            body: formData
+                        });
                         
+                        const data = await response.json();
+                        if (!data.secure_url) throw new Error("Nie udało się przesłać wideo do chmury.");
+
+                        // 2. Zapis do Firestore
                         await addDoc(collection(db, "videos"), {
-                            url,
+                            url: data.secure_url,
                             title: document.getElementById('titleInput').value,
                             desc: document.getElementById('descInput').value,
                             author: localStorage.getItem('tiktok_user_name') || "Anonim",
                             createdAt: serverTimestamp()
                         });
 
-                        // Czyszczenie bazy po sukcesie
-                        const delTx = db.transaction("videos", "readwrite");
+                        // 3. Czyszczenie bazy
+                        const delTx = dbInstance.transaction("videos", "readwrite");
                         delTx.objectStore("videos").delete("tempVideo");
                         
-                        // Przekierowanie na stronę główną
                         window.location.href = "index.html"; 
                     } catch (error) {
                         alert("Błąd: " + error.message);
