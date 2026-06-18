@@ -66,24 +66,31 @@
 </div>
 
 <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getFirestore, collection, query, orderBy, getDocs, doc, updateDoc, arrayUnion, arrayRemove } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyDro4WgKOggj12aWFiQprLc4XEc6O3MuBg",
+        authDomain: "nwmok-8680a.firebaseapp.com",
+        projectId: "nwmok-8680a",
+        storageBucket: "nwmok-8680a.firebasestorage.app",
+        messagingSenderId: "1072719450908",
+        appId: "1:1072719450908:web:aa47aad13acf2a3115e0d9",
+        measurementId: "G-T8JYCLS3BS"
+    };
+
     if (!localStorage.getItem('tiktok_user_name')) {
         window.location.href = 'login.html';
     }
 
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-    import { getFirestore, collection, query, orderBy, getDocs, doc, updateDoc, arrayUnion, arrayRemove } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-
-    const firebaseConfig = { /* Twój config */ };
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
     const feed = document.getElementById('feed');
     const currentUser = localStorage.getItem('tiktok_user_name') || "Anonim";
 
-    // Obsługa polubień
     window.toggleLike = async (videoId, btnElement, countElement) => {
         const videoRef = doc(db, "videos", videoId);
         const isLiked = btnElement.style.fill === 'red';
-        
         if (isLiked) {
             btnElement.style.fill = 'white';
             countElement.innerText = parseInt(countElement.innerText) - 1;
@@ -98,7 +105,6 @@
     async function loadVideos() {
         const q = query(collection(db, "videos"), orderBy("createdAt", "desc"));
         const snapshot = await getDocs(q);
-        
         snapshot.forEach((doc) => {
             const data = doc.data();
             const likes = data.likes || [];
@@ -113,9 +119,6 @@
                             <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
                         </svg>
                         <div class="like-count">${likes.length}</div>
-                    </div>
-                    <div class="action">
-                        <svg class="icon" viewBox="0 0 24 24"><path d="M21.99 4c0-1.1-.89-2-1.99-2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h14l4 4-.01-18z"/></svg>
                     </div>
                 </div>
                 <div class="footer">
@@ -132,10 +135,8 @@
                 e.isIntersecting ? v.play() : v.pause();
             });
         }, { threshold: 0.7 });
-
         document.querySelectorAll('.video-card').forEach(c => observer.observe(c));
     }
-
     loadVideos();
 </script>
 </body>

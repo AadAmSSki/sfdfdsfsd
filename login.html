@@ -5,39 +5,43 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Logowanie - TikTok Clone</title>
     
-    <link rel="manifest" href="manifest.json">
-    <script>
-      if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('sw.js')
-          .then(() => console.log('PWA Service Worker zarejestrowany!'));
-      }
-    </script>
-
     <style>
         body { background: #000; color: white; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; font-family: sans-serif; margin: 0; }
         .container { text-align: center; width: 85%; max-width: 320px; }
         input { padding: 15px; margin: 10px 0; width: 100%; border: none; border-radius: 10px; background: #222; color: white; box-sizing: border-box; }
         .avatar-preview { width: 100px; height: 100px; background: #333; border-radius: 50%; margin: 0 auto 20px; cursor: pointer; display: flex; align-items: center; justify-content: center; background-size: cover; background-position: center; border: 2px solid #444; }
-        button { padding: 15px; width: 100%; background: #ff6200; color: white; border: none; border-radius: 10px; cursor: pointer; font-weight: bold; margin-top: 20px; }
+        button { padding: 15px; width: 100%; background: #fe2c55; color: white; border: none; border-radius: 10px; cursor: pointer; font-weight: bold; margin-top: 20px; }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="avatar-preview" id="avatarPreview" onclick="goToEditor()">+ Foto</div>
-        
         <input type="text" id="nameInput" placeholder="Nazwa wyświetlana">
         <input type="text" id="handleInput" placeholder="@username">
-        
         <button onclick="zapiszProfil()">Zaczynamy!</button>
     </div>
 
-    <script>
-        // Przywracanie danych przy powrocie
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyDro4WgKOggj12aWFiQprLc4XEc6O3MuBg",
+            authDomain: "nwmok-8680a.firebaseapp.com",
+            projectId: "nwmok-8680a",
+            storageBucket: "nwmok-8680a.firebasestorage.app",
+            messagingSenderId: "1072719450908",
+            appId: "1:1072719450908:web:aa47aad13acf2a3115e0d9",
+            measurementId: "G-T8JYCLS3BS"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
         window.onload = () => {
             const name = localStorage.getItem('temp_name');
             const handle = localStorage.getItem('temp_handle');
             const avatar = localStorage.getItem('tiktok_user_avatar_cropped');
-
             if (name) document.getElementById('nameInput').value = name;
             if (handle) document.getElementById('handleInput').value = handle;
             if (avatar) {
@@ -47,30 +51,41 @@
             }
         };
 
-        function goToEditor() {
-            // Zapisujemy tymczasowo dane przed wyjściem do edytora
+        window.goToEditor = () => {
             localStorage.setItem('temp_name', document.getElementById('nameInput').value);
             localStorage.setItem('temp_handle', document.getElementById('handleInput').value);
             window.location.href = "wybierz-foto.html";
         }
 
-        function zapiszProfil() {
+        window.zapiszProfil = async () => {
             const name = document.getElementById('nameInput').value;
             const handle = document.getElementById('handleInput').value;
             const avatar = localStorage.getItem('tiktok_user_avatar_cropped');
             
             if (!name || !handle || !avatar) return alert("Uzupełnij profil i ustaw zdjęcie!");
 
-            localStorage.setItem('tiktok_user_name', name);
-            localStorage.setItem('tiktok_user_handle', handle);
-            localStorage.setItem('tiktok_user_avatar', avatar);
-            
-            // Czyścimy tymczasowe po zapisie
-            localStorage.removeItem('temp_name');
-            localStorage.removeItem('temp_handle');
-            localStorage.removeItem('tiktok_user_avatar_cropped');
-            
-            window.location.href = "index.html";
+            // 1. Zapis do bazy danych Firestore
+            try {
+                await setDoc(doc(db, "users", handle), {
+                    name: name,
+                    handle: handle,
+                    avatar: avatar,
+                    createdAt: new Date().toISOString()
+                });
+
+                // 2. Zapis do pamięci urządzenia
+                localStorage.setItem('tiktok_user_name', name);
+                localStorage.setItem('tiktok_user_handle', handle);
+                localStorage.setItem('tiktok_user_avatar', avatar);
+                
+                localStorage.removeItem('temp_name');
+                localStorage.removeItem('temp_handle');
+                localStorage.removeItem('tiktok_user_avatar_cropped');
+                
+                window.location.href = "index.html";
+            } catch (e) {
+                alert("Błąd zapisu profilu: " + e.message);
+            }
         }
     </script>
 </body>

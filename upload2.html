@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Publikuj</title>
+    <style>
+        body { margin: 0; background: #000; color: #fff; font-family: sans-serif; padding: 15px; }
+        .top-nav { display: flex; justify-content: space-between; margin-bottom: 20px; font-size: 24px; }
+        .upload-row { display: flex; gap: 15px; margin-bottom: 20px; }
+        .thumbnail { width: 90px; height: 120px; background: #222; border-radius: 5px; object-fit: cover; }
+        textarea { width: 100%; background: none; border: none; color: #fff; font-size: 16px; resize: none; margin-bottom: 10px; }
+        .bottom-bar { position: fixed; bottom: 0; left: 0; width: 100%; padding: 15px; display: flex; gap: 10px; background: #000; box-sizing: border-box; }
+        .btn-publish { width: 100%; background: #fe2c55; border: none; color: white; padding: 15px; border-radius: 5px; font-weight: bold; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <div class="top-nav"><div onclick="history.back()">←</div></div>
+    <div class="upload-row">
+        <video id="videoThumbnail" class="thumbnail" preload="metadata" muted playsinline></video>
+    </div>
+    <textarea id="titleInput" placeholder="Dodaj tytuł" rows="1"></textarea>
+    <textarea id="descInput" placeholder="Dodaj opis..." rows="3"></textarea>
+
+    <div class="bottom-bar">
+        <button class="btn-publish" onclick="finalPublish()">Opublikuj</button>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
+
+        // --- WKLEJ SWÓJ CONFIG PONIŻEJ ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyDro4WgKOggj12aWFiQprLc4XEc6O3MuBg",
+            authDomain: "nwmok-8680a.firebaseapp.com",
+            projectId: "nwmok-8680a",
+            storageBucket: "nwmok-8680a.firebasestorage.app",
+            messagingSenderId: "1072719450908",
+            appId: "1:1072719450908:web:aa47aad13acf2a3115e0d9"
+        };
+        // ---------------------------------
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const storage = getStorage(app);
+
+        // POBIERANIE MINIATURY Z INDEXEDDB
+        const request = indexedDB.open("TikTokCloneDB", 1);
+        request.onsuccess = (e) => {
+            const db = e.target.result;
+            if (!db.objectStoreNames.contains("videos")) return;
+            
+            const tx = db.transaction("videos", "readonly");
+            const getReq = tx.objectStore("videos").get("tempVideo");
+            
+            getReq.onsuccess = () => {
+                if(getReq.result) {
+                    const video = document.getElementById('videoThumbnail');
+                    video.src = URL.createObjectURL(getReq.result);
+                    video.onloadedmetadata = () => { video.currentTime = 0.5; };
+                }
+            };
+        };
+
+        // PUBLIKACJA DO FIREBASE
+        window.finalPublish = async () => {
+            const btn = document.querySelector('.btn-publish');
+            btn.innerText = "Publikowanie...";
+            btn.disabled = true;
+
+            const req = indexedDB.open("TikTokCloneDB", 1);
+            req.onsuccess = (e) => {
+                const db = e.target.result;
+                const tx = db.transaction("videos", "readonly");
+                const getReq = tx.objectStore("videos").get("tempVideo");
+                
+                getReq.onsuccess = async () => {
+                    const blob = getReq.result;
+                    if (!blob) { alert("Błąd: Brak wideo!"); return; }
+                    try {
+                        const storageRef = ref(storage, 'videos/' + Date.now() + '.mp4');
+                        await uploadBytes(storageRef, blob);
+                        const url = await getDownloadURL(storageRef);
+                        
+                        await addDoc(collection(db, "videos"), {
+                            url,
+                            title: document.getElementById('titleInput').value,
+                            desc: document.getElementById('descInput').value,
+                            author: localStorage.getItem('tiktok_user_name') || "Anonim",
+                            createdAt: serverTimestamp()
+                        });
+
+                        // Czyszczenie bazy po sukcesie
+                        const delTx = db.transaction("videos", "readwrite");
+                        delTx.objectStore("videos").delete("tempVideo");
+                        
+                        // Przekierowanie na stronę główną
+                        window.location.href = "index.html"; 
+                    } catch (error) {
+                        alert("Błąd: " + error.message);
+                        btn.innerText = "Opublikuj";
+                        btn.disabled = false;
+                    }
+                };
+            };
+        };
+    </script>
+</body>
+</html>
